@@ -223,7 +223,7 @@ exec claude "$@"
 
 | 项 | 默认 | 作用 |
 | --- | --- | --- |
-| `group_indent` | `2` | 成员缩进几格，`0` 平铺 |
+| `group_indent` | `2` | 树的每层缩进空格数；`0` 时表头和空行保留，但不画树线；平铺列表用 `prefix+a` |
 | `group_headers` | `true` | 每个工作区名显示一行表头 |
 | `group_colors` | `true` | 每组一色和左侧条纹；工作区的 `owner` token 选择所属组 |
 | `leader_role` | `architect` | `role` token 为此值的面板在组内排第一；留空关闭 |

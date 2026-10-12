@@ -1,5 +1,70 @@
 # Changelog
 
+## 1.4.4 — 2026-10-09
+
+- **Every named session gets its sidebar.** Herdr gives every session the
+  same plugin state directory, so with two sessions running (`herdr session`)
+  the second one found the first one's daemon, took it as its own and
+  stopped — and that daemon only ever reports to the first session. The
+  second session's rows came out blank. Each named session now runs its own
+  daemon, with its own lock and control endpoint under
+  `runtime-<session>/`; the default session keeps the paths it always had,
+  so a single-session setup changes nothing and nothing migrates.
+  [#43](https://github.com/hhdebb/herdr-radar/pull/43) by @pmochine, fixing
+  [#25](https://github.com/hhdebb/herdr-radar/issues/25) reported by
+  @smkamranqadri; tested on macOS and Linux by @ronzyfonzy and @guim4dev.
+
+- **Each session's tab bar shows its own directory.** With a daemon per
+  session, all of them wrote the one tab-bar cache, so a session could show
+  another session's directory. The line is now kept per session, and the
+  tab-bar command reads the file of the session it runs in. The daemon
+  rewrites the tab-bar block on its next start; nothing to do by hand.
+
+## 1.4.3 — 2026-10-09
+
+- **A pane moved to another workspace keeps its row.** After `herdr pane
+  move … --workspace … --new-tab` the pane gets a new id, while Herdr still
+  answers to the old one with the moved pane — so clearing the old id as a
+  closed pane wiped the live one, and its row lost its logo and title until
+  the daemon restarted. A move is recognised now by the terminal the pane
+  keeps across it: what the daemon remembers follows the pane, and the old id
+  is dropped without a clear.
+  [#47](https://github.com/hhdebb/herdr-radar/pull/47) by @rmarescu.
+
+- **A dark Mac no longer turns light under load.** The macOS appearance
+  probe read any non-zero exit as light mode, including a probe that timed
+  out — which then switched Herdr's theme to the light one on a dark
+  desktop. A probe that never answered now leaves the theme alone.
+  [#48](https://github.com/hhdebb/herdr-radar/pull/48) by @pmochine.
+
+## 1.4.2 — 2026-10-04
+
+- **`group_indent = 0` keeps the headers.** Zero indent used to mean a flat
+  list: the workspace headers and the gaps between groups went with the
+  indent, so there was no way to save the two columns and still see which
+  project a session belongs to. Now `0` only drops the indent — headers and
+  gaps stay, and no tree corners are drawn. If you set `0` to get a flat
+  list, use `prefix+a` (the recent-first order) instead.
+  [#31](https://github.com/hhdebb/herdr-radar/pull/31) by @sleistner.
+
+## 1.4.1 — 2026-10-04
+
+- **Herdr reads your config again.** 1.3.21 gave three more vendors a
+  working mark of their own in the Spaces column, which took that row to
+  eighteen tokens. Herdr refuses a sidebar row over sixteen, and with it the
+  whole `config.toml` — so on any machine where the plugin rewrote its
+  sidebar block, Herdr ran on its defaults and every setting of your own was
+  ignored (`herdr config check` reports `sidebar rows may contain at most 16
+  tokens`). Nine vendors now keep a working mark of their own and the rest
+  share the generic one; every vendor's logo keeps its colour. **Nothing to
+  do by hand**: the daemon recognises the broken block on start, rewrites it
+  and reloads Herdr.
+
+  Two things let it through, and both are closed: the row-limit guard only
+  counted the Agents rows, and the switch that follows your desktop's light
+  and dark wrote the block without checking it — every write now goes through
+  `herdr config check` and is rolled back if Herdr cannot parse it.
+
 ## 1.4.0 — 2026-10-03
 
 - **A Kilo Code session that predates the daemon gets its freshness back.**
