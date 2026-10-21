@@ -45,6 +45,23 @@ test('compose appends the extras after the path and leaves the line alone withou
   assert.equal(tabline.compose({ cwd: '/work/project', row: 200, tabs: 1, extras: ['To-do 3'] }), `${base} · To-do 3`);
 });
 
+test('compose leaves out extras that cannot fit next to the path', () => {
+  const extras = ['a'.repeat(32), 'b'.repeat(32)];
+  const line = tabline.compose({ cwd: '/work/project', row: 80, tabs: 1, extras });
+  assert.equal(line, `/work/project · ${extras[0]}`);
+  assert.ok(Array.from(line).length <= 80 - 24 - 5);
+  assert.equal(
+    tabline.compose({ cwd: '/work/project', row: 30, tabs: 1, extras }),
+    tabline.compose({ cwd: '/work/project', row: 30, tabs: 1 }),
+  );
+});
+
+test('tabbarExtras cuts at code points, not UTF-16 units', () => {
+  const [text] = tabline.tabbarExtras([pane('a', { tabbar: `${'x'.repeat(31)}😀tail` })]);
+  assert.equal(text, `${'x'.repeat(31)}😀`);
+  assert.equal(text.includes('\ufffd'), false);
+});
+
 test('compose shortens the path so the extras still fit the row', () => {
   const cwd = `/srv/${'a'.repeat(30)}/${'b'.repeat(8)}`;
   const plain = tabline.compose({ cwd, row: 80, tabs: 1 });
