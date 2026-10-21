@@ -46,6 +46,9 @@ sessions of one project sit under one header, and the busiest project sits on to
   the Spaces column takes the same colours.
 - **The surroundings follow.** The tab bar shows the current directory, Herdr's theme switches
   with the desktop's light and dark, and one settings popup holds every option.
+  Any pane can add a segment to the tab bar by reporting a `tabbar` token
+  (`herdr pane report-metadata <pane> --source <id> --token 'tabbar=To-do 3'`): the daemon appends
+  the text of every such pane, in pane-list order, after the directory. Clear the token to hide it.
 
 ## Quick start
 
