@@ -57,8 +57,8 @@ test('compose leaves out extras that cannot fit next to the path', () => {
 });
 
 test('tabbarExtras cuts at code points, not UTF-16 units', () => {
-  const [text] = tabline.tabbarExtras([pane('a', { tabbar: `${'x'.repeat(31)}😀tail` })]);
-  assert.equal(text, `${'x'.repeat(31)}😀`);
+  const [text] = tabline.tabbarExtras([pane('a', { tabbar: `${'x'.repeat(30)}😀tail` })]);
+  assert.equal(text, `${'x'.repeat(30)}😀`);
   assert.equal(text.includes('\ufffd'), false);
 });
 
@@ -91,4 +91,33 @@ test('snapshotLine puts the extras after the focused pane path', async (t) => {
   const line = await tabline.snapshotLine();
   assert.ok(line.endsWith(' · To-do 2'), line);
   assert.ok(line.length > ' · To-do 2'.length);
+});
+
+const columns = (text) => Array.from(text).reduce((sum, char) => sum + (char === '界' ? 2 : 1), 0);
+
+test('compose drops the extras when the path it had to keep leaves no room for them', () => {
+  const cwd = `/srv/${'project'.repeat(5)}`;
+  const line = tabline.compose({ cwd, row: 80, tabs: 1, extras: ['a'.repeat(32)] });
+  assert.equal(line, tabline.compose({ cwd, row: 80, tabs: 1 }));
+  assert.ok(!line.includes('aaaa'));
+});
+
+test('tabbarExtras cuts wide characters at EXTRA_MAX terminal columns', () => {
+  const [text] = tabline.tabbarExtras([pane('a', { tabbar: '界'.repeat(32) })]);
+  assert.equal(text, '界'.repeat(16));
+  assert.equal(columns(text), 32);
+});
+
+test('compose measures wide characters in terminal columns', () => {
+  const row = 70;
+  const line = tabline.compose({ cwd: '/work/project', row, tabs: 1, extras: ['界'.repeat(16)] });
+  assert.equal(line, tabline.compose({ cwd: '/work/project', row, tabs: 1 }));
+  const fits = tabline.compose({ cwd: '/work/project', row, tabs: 1, extras: ['界'.repeat(10)] });
+  assert.ok(fits.endsWith('界'.repeat(10)));
+  assert.ok(columns(fits) <= row - 24 - 5);
+});
+
+test('tabbarExtras counts combining marks as zero columns', () => {
+  const token = 'é'.repeat(20);
+  assert.deepEqual(tabline.tabbarExtras([pane('a', { tabbar: token })]), [token]);
 });
