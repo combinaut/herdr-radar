@@ -16,6 +16,12 @@
 
 ---
 
+> [!NOTE]
+> **Maintenance mode.** Herdr's new app, herdr-app, now has much of this built in: grouping,
+> vendor logos and clearer working status. herdr-radar stays a plugin for the Herdr TUI: it keeps
+> up with new Herdr releases and bugs get fixed, and small fixes are welcome as PRs, but it won't
+> get new features. See [#73](https://github.com/hhdebb/herdr-radar/issues/73).
+
 ## What it is
 
 A [Herdr](https://herdr.dev) plugin that turns the sidebar's Agents list into something you
@@ -70,8 +76,8 @@ needed), and writes the codepoint map into Ghostty / kitty configs if they exist
 
 > [!NOTE]
 > Requires Herdr 0.9.0+ and Node 18+. Tested on Windows 11 and macOS; Linux not yet.
-> Terminals without a codepoint map (Windows Terminal, iTerm) and the tab bar not following
-> `cd` on Windows are covered under *Troubleshooting*.
+> Terminals without a codepoint map (Windows Terminal, iTerm, Alacritty) and the tab bar not
+> following `cd` on Windows are covered under *Troubleshooting*.
 
 Two keys, optional — paste into `config.toml`. Both go through Herdr's prefix (`ctrl+b` by
 default), so they cannot collide with anything running inside a pane:
@@ -111,8 +117,7 @@ The daemon that is already running keeps the version it started with until Herdr
 To switch to the new one now, restart just the daemon; your panes are not touched:
 
 ```sh
-herdr plugin action invoke hhdebb.herdr-radar.state-stop
-herdr plugin action invoke hhdebb.herdr-radar.state-start
+herdr plugin action invoke hhdebb.herdr-radar.state-restart
 ```
 
 ### Or hand it to an agent
@@ -335,12 +340,19 @@ the config file and restarts the daemon.
 | `trim_group_prefix` | `true` | drop the workspace name from a title when the header above already shows it |
 | `worktree_mark` | `U+F418` | the mark on a worktree header, needs a Nerd Font; empty for none |
 
+### Machines
+
+| Option | Default | Does |
+| --- | --- | --- |
+| `multi_machine` | `false` | put the machine's name after each workspace header, `web · Machine-One`, for sessions on saved SSH machines; set it on each machine, since each one names its own |
+| `machine_label` | `""` | the name `multi_machine` shows; empty uses the hostname |
+
 ### Rows
 
 | Option | Default | Does |
 | --- | --- | --- |
 | `row_label` | `title` | what names an agent row: `title`, `tab` (the tab's name) or `both`; replaces `show_tab` |
-| `variant` | `auto` | logos from the icon font (`font`), plain Unicode (`text`), or `none`; `auto` recognises the font the plugin installed |
+| `variant` | `auto` | logos from the icon font (`font`), plain Unicode (`text`), or `none`; `auto` picks `font` once the plugin's font is installed, whether or not the terminal can map it (see *Troubleshooting*) |
 
 ### Appearance
 
@@ -375,7 +387,7 @@ switch_workspace = "prefix+shift+1..9"
 
 The first two are live state; the rest live in
 `$(herdr plugin config-dir hhdebb.herdr-radar)/config.toml` and can be edited by hand —
-then `state-stop` and `state-start`. The file appears the first time the popup saves; before
+then `state-restart`. The file appears the first time the popup saves; before
 that, create it with the keys above (booleans unquoted: `group_gap = false`).
 
 Both this file and Herdr's `config.toml` can be symlinks into a dotfiles repository: the
@@ -395,14 +407,16 @@ terminal and reopen it. macOS keeps an extra cache: `killall fontd fontworker`, 
 </details>
 
 <details>
-<summary><b>A logo renders as a random CJK character</b></summary>
+<summary><b>A logo or status mark renders as a random CJK character</b></summary>
 
 Another font claimed the same Private Use Area — CJK fonts often do. The terminal must map the
 codepoints to `Herdr Agent Icons Max`; adding it as a fallback family is not enough. Ghostty /
 kitty: `herdr plugin action invoke hhdebb.herdr-radar.install-font` writes the map. Other
 terminals: map `U+E1A0–U+E1BA` and `U+E1C0–U+E1C5` by hand. Terminals with no codepoint map
-(Windows Terminal, iTerm): use `dist/JetBrainsMonoHerdr-Regular.ttf` as the terminal font —
-JetBrains Mono with the icons patched in.
+(Windows Terminal, iTerm, Alacritty) have two ways out: use `dist/JetBrainsMonoHerdr-Regular.ttf`
+as the terminal font — JetBrains Mono with the icons patched in — or set `variant = "text"`
+(`prefix+,`), which draws every mark in plain Unicode. `variant = "auto"` cannot make this
+choice for you: it sees that the font is installed, not whether the terminal maps it.
 
 On Ghostty, `ghostty +show-face` is the only command that says whether the map resolved;
 `+show-config` and `+list-fonts` pass either way. The map written by v1.3.7 and earlier was
@@ -436,7 +450,7 @@ versions refused the whole install instead, with the reason only in the plugin l
 <summary><b>Changed a setting, nothing happened</b></summary>
 
 The daemon reads its config at start. `s` in the settings popup restarts it; after a hand edit,
-`state-stop` then `state-start`. Editing the three managed blocks in `config.toml` directly
+`state-restart`. Editing the three managed blocks in `config.toml` directly
 does not stick — the next `configure` writes them back.
 </details>
 

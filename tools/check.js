@@ -475,6 +475,9 @@ const NOT_A_STRING = [null, undefined, 0, {}];
 for (const [agent, display] of Object.entries(DISPLAY)) {
   if (!display) continue;
   for (const raw of SAYS_NOTHING) {
+    // A bare folder name is a leftover shell title only for an agent that
+    // writes none of its own; the other half is checked below (#66).
+    if (raw === 'notes' && state.WRITES_OWN_TITLE.has(agent)) continue;
     const resolved = state.vendorTitle(agent, state.stripVendorPulse(raw), CWD);
     if (resolved !== display) {
       problems.push(
@@ -505,6 +508,19 @@ for (const [raw, want] of [
     );
   }
 }
+// An agent that writes its own title chose a session name that happens to be
+// the folder's, and that name stays (#66). Codex never writes one, so for it
+// the same text is the shell's and gives way to the vendor (checked above).
+for (const agent of state.WRITES_OWN_TITLE) {
+  const resolved = state.vendorTitle(agent, 'notes', CWD);
+  if (resolved !== 'notes') {
+    problems.push(
+      `vendorTitle(${JSON.stringify(agent)}, "notes") is ${JSON.stringify(resolved)}, not "notes" — ` +
+        'a session named after its folder loses its name',
+    );
+  }
+}
+
 // An agent with no name of its own has nothing to fall back to, and an empty
 // string is the right answer: stateTokens turns it into a null token, which
 // clears the cell, where a blank string would leave one drawn and empty.

@@ -36,7 +36,7 @@ test('the popup names the keys that save, reset and change a value', () => {
 test('settings sections preserve the requested tab order and every field', () => {
   assert.deepEqual(
     SETTINGS_SECTIONS.map((section) => section.name),
-    ['Panel', 'Agent state', 'Groups', 'Rows', 'Appearance'],
+    ['Panel', 'Agent state', 'Groups', 'Machines', 'Rows', 'Appearance'],
   );
   assert.equal(SETTINGS_SECTIONS.flatMap((section) => section.fields).length, FIELDS.length);
 });

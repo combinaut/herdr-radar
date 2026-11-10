@@ -16,6 +16,12 @@
 
 ---
 
+> [!NOTE]
+> **维护模式。** Herdr 新出的 herdr-app 已经内置了这里的大部分功能：分组、厂商 logo、
+> 更清楚的工作状态。herdr-radar 继续作为 Herdr TUI 的插件存在：会跟上 Herdr 的新版本、
+> 修 bug，小的修复欢迎提 PR，但不再加新功能。详见
+> [#73](https://github.com/hhdebb/herdr-radar/issues/73)。
+
 ## 这是什么
 
 一个 [Herdr](https://herdr.dev) 插件，把侧边栏的 Agents 列表改成一块能读的面板：谁在干活、
@@ -60,7 +66,7 @@ Ghostty / kitty 的配置存在的话写入码位映射。
 
 > [!NOTE]
 > 需要 Herdr 0.9.0+ 和 Node 18+。Windows 11 和 macOS 实测过，Linux 尚未实测。
-> 没有按码位映射的终端（Windows Terminal、iTerm）和 Windows 上标签栏不跟 `cd` 的问题，
+> 没有按码位映射的终端（Windows Terminal、iTerm、Alacritty）和 Windows 上标签栏不跟 `cd` 的问题，
 > 见「常见问题」。
 
 绑两个键（可选，粘进 `config.toml`）。都走 Herdr 的 prefix，默认 `ctrl+b`，不会和面板里的
@@ -100,8 +106,7 @@ herdr plugin update hhdebb.herdr-radar
 不影响任何面板：
 
 ```sh
-herdr plugin action invoke hhdebb.herdr-radar.state-stop
-herdr plugin action invoke hhdebb.herdr-radar.state-start
+herdr plugin action invoke hhdebb.herdr-radar.state-restart
 ```
 
 ### 或者交给 agent 装
@@ -249,12 +254,19 @@ exec claude "$@"
 | `trim_group_prefix` | `true` | 标题开头与分组表头同名时去掉那一截 |
 | `worktree_mark` | `U+F418` | worktree 表头的标记，需要 Nerd Font；置空不画 |
 
+### 机器
+
+| 项 | 默认 | 作用 |
+| --- | --- | --- |
+| `multi_machine` | `false` | 在每个工作区表头后面加上机器名，如 `web · Machine-One`，用于区分已保存的 SSH 机器上的会话；每台机器各自设置，因为表头由各机器自己写 |
+| `machine_label` | `""` | `multi_machine` 显示的名字；留空用主机名 |
+
 ### 行
 
 | 项 | 默认 | 作用 |
 | --- | --- | --- |
 | `row_label` | `title` | 行显示什么：`title` 会话标题、`tab` tab 名、`both` 两者都显示（原 `show_tab = true`） |
-| `variant` | `auto` | logo 来源：`font` 图标字体 / `text` 普通 Unicode / `none`。`auto` 认插件自己装的字体 |
+| `variant` | `auto` | logo 来源：`font` 图标字体 / `text` 普通 Unicode / `none`。`auto` 只要插件的字体装上了就用 `font`，不管终端能不能映射（见「常见问题」） |
 
 ### 外观
 
@@ -265,7 +277,7 @@ exec claude "$@"
 | `colors.active_row_bg_dark` | `#414868` | 深色主题的选中行底色 |
 
 前两项是实时状态，其余存在 `$(herdr plugin config-dir hhdebb.herdr-radar)/config.toml`，
-手改也行，改完 `state-stop` 再 `state-start`。这个文件在弹窗第一次保存时才出现，之前要手改就按上表的键
+手改也行，改完运行 `state-restart`。这个文件在弹窗第一次保存时才出现，之前要手改就按上表的键
 自己建一个（布尔值不加引号：`group_gap = false`）。
 
 ## 常见问题
@@ -280,13 +292,15 @@ exec claude "$@"
 </details>
 
 <details>
-<summary><b>logo 画成了一个随机汉字</b></summary>
+<summary><b>logo 或状态标记画成了一个随机汉字</b></summary>
 
 这段私有区被别的字体抢了，CJK 字体尤其常见。终端必须按码位映射到 `Herdr Agent Icons Max`，
 只加进 fallback 家族不够。Ghostty / kitty 跑一次 `herdr plugin action invoke hhdebb.herdr-radar.install-font`
 就写好了；其他终端手动映射 `U+E1A0–U+E1BA` 和 `U+E1C0–U+E1C5`。没有按码位映射能力的终端
-（Windows Terminal、iTerm）改用 `dist/JetBrainsMonoHerdr-Regular.ttf` 当主字体，它是打进了
-图标的 JetBrains Mono。
+（Windows Terminal、iTerm、Alacritty）有两条路：改用 `dist/JetBrainsMonoHerdr-Regular.ttf`
+当主字体，它是打进了图标的 JetBrains Mono；或者设 `variant = "text"`（`prefix+,`），所有标记
+都用普通 Unicode 画。`variant = "auto"` 替你做不了这个选择：它只看得到字体装没装，看不到终端
+能不能映射。
 
 Ghostty 上只有 `ghostty +show-face` 能说明映射到底生没生效，`+show-config` 和 `+list-fonts`
 两种情况下都一样通过。v1.3.7 及以前写进去的那行是失效的（家族名带了引号），
@@ -306,7 +320,7 @@ Ghostty 上只有 `ghostty +show-face` 能说明映射到底生没生效，`+sho
 <details>
 <summary><b>改了配置没生效</b></summary>
 
-守护进程只在启动时读配置。设置弹窗里按 `s` 会自动重启；手改文件后 `state-stop` 再 `state-start`。
+守护进程只在启动时读配置。设置弹窗里按 `s` 会自动重启；手改文件后运行 `state-restart`。
 直接改 `config.toml` 里的三个托管块不算数，下次 `configure` 会写回去。
 </details>
 

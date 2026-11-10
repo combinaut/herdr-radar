@@ -17,6 +17,7 @@ require('../lib/node-version');
 //   node bin/agent-state.js --stop --purge
 //                                      stop it and clear every token it ever
 //                                      wrote — the uninstall path
+//   node bin/agent-state.js --restart  stop it, then start a fresh one
 
 const fs = require('node:fs');
 
@@ -24,7 +25,7 @@ const herdr = require('../lib/herdr');
 const state = require('../lib/state');
 const daemon = require('../lib/daemon');
 const { stopAnimator } = require('../lib/stop');
-const { detachedNode } = require('../lib/spawn');
+const spawn = require('../lib/spawn');
 
 async function spawnAnimator() {
   // First start after an install: write the managed blocks, install the font.
@@ -66,10 +67,25 @@ async function spawnAnimator() {
   } catch {
     // No log is no reason not to run.
   }
-  detachedNode(__filename, ['--animate'], { stdio });
+  spawn.detachedNode(__filename, ['--animate'], { stdio });
 }
 
-const mode = process.argv.find((a) => a.startsWith('--'));
-if (mode === '--animate') daemon.start();
-else if (mode === '--stop') stopAnimator({ purge: process.argv.includes('--purge') });
-else spawnAnimator();
+// Both halves in one process, in order. `herdr plugin action invoke` returns
+// once the action's command has started, so `state-stop` then `state-start`
+// typed back to back run side by side: the start asks while the old daemon is
+// still answering, calls it healthy, and leaves once it exits with nothing in
+// its place (#65). stopAnimator returns only after the endpoint has gone quiet.
+async function restartAnimator() {
+  await stopAnimator();
+  await spawnAnimator();
+}
+
+if (require.main === module) {
+  const mode = process.argv.find((a) => a.startsWith('--'));
+  if (mode === '--animate') daemon.start();
+  else if (mode === '--stop') stopAnimator({ purge: process.argv.includes('--purge') });
+  else if (mode === '--restart') restartAnimator();
+  else spawnAnimator();
+}
+
+module.exports = { restartAnimator };

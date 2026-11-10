@@ -1,5 +1,79 @@
 # Changelog
 
+## 1.5.2 — 2026-11-05
+
+- **Worktrees of one repo stay together when its main checkout runs no
+  agent.** Each one used to get its own repo row, and a project busy in
+  between could split them, so the panel showed the same repo twice. They
+  now rank as one family under a single repo row, the same way worktrees
+  do when the checkout has an agent.
+  [#77](https://github.com/hhdebb/herdr-radar/pull/77) by @bautiRL.
+
+- **A read-only terminal config no longer aborts the install.** When a
+  Ghostty or kitty config can't be written, for example because Home
+  Manager links it into the Nix store, setup skips that file, prints the
+  lines to add yourself, and still updates the other configs. Removing the
+  map handles a read-only file the same way.
+  [#78](https://github.com/hhdebb/herdr-radar/issues/78)
+
+- **The READMEs now cover Alacritty.** Alacritty has no way to map
+  codepoints to a font, so status marks can show as an unrelated character
+  even with the icon font installed. The troubleshooting entry lists it
+  and adds `variant = "text"` as a second way out.
+  [#74](https://github.com/hhdebb/herdr-radar/issues/74)
+
+## 1.5.1 — 2026-10-31
+
+- **Radar is in maintenance mode.** Herdr's new app, herdr-app, now has
+  much of what radar adds built in. Radar stays a plugin for the Herdr
+  TUI: it keeps up with new Herdr releases, bugs get fixed, and small
+  fixes are welcome as PRs, but it won't get new features. The READMEs say
+  so at the top.
+  [#73](https://github.com/hhdebb/herdr-radar/issues/73)
+
+- **Two machines' workspaces with the same id no longer mix.** Each Herdr
+  server numbers its own workspaces, so two saved machines can both have a
+  `w8`. When both were busy in the same minute their rows could interleave
+  under one header. With `multi_machine` on, the machine label now keeps
+  them apart in the sort. Nothing changes while it is off.
+  [#72](https://github.com/hhdebb/herdr-radar/pull/72) by @wapenshaw.
+
+- **For contributors: the tests no longer stop a running radar on
+  Windows.** On Windows, one test could reach the daemon you were running
+  and end it, which left the sidebar frozen until a `state-restart`. The
+  test now uses a control channel of its own.
+
+## 1.5.0 — 2026-10-27
+
+- **Workspace headers can name their machine.** Herdr shows sessions from
+  saved SSH machines in one panel, and two workspaces called `web` on
+  different machines had identical headers. Set `multi_machine = true` and
+  each header reads `web · Machine-One`. `machine_label` picks the name,
+  and the hostname is used when it is empty. Set it on each machine, since
+  each one writes its own headers. Off by default, and nothing changes
+  while it is off. Both settings are in the settings popup.
+  [#70](https://github.com/hhdebb/herdr-radar/pull/70) by @wapenshaw.
+
+- **`state-restart` restarts the daemon in one step.** The README's
+  `state-stop` then `state-start` could leave no daemon at all:
+  `herdr plugin action invoke` returns as soon as the command starts, so
+  the two ran side by side, and the start found the old daemon still
+  answering and did nothing. The new action stops the daemon, waits until
+  it has gone, then starts a new one, and the README now uses it.
+  [#65](https://github.com/hhdebb/herdr-radar/issues/65)
+
+- **A session named after its folder keeps its name.** A Claude Code
+  session called `design` in a folder called `design` showed as "Claude
+  Code". The folder-name rule is meant for codex, which writes no title of
+  its own; Claude Code and grok do, so their titles now stay.
+  [#66](https://github.com/hhdebb/herdr-radar/issues/66)
+
+- **A server that hangs up without replying no longer freezes the
+  sidebar.** Such a call never finished, so the frame waiting on it never
+  ended, and each one held one of the sixteen call slots for good. It now
+  ends as a failed call.
+  [#68](https://github.com/hhdebb/herdr-radar/pull/68) by @aboynamedcrow.
+
 ## 1.4.9 — 2026-10-21
 
 - **An answered question stops showing red when a hook reports the
