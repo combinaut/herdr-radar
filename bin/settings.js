@@ -161,6 +161,7 @@ const FIELDS = [
     key: 'leader_role',
     section: 'Groups',
     kind: 'text',
+    role: true,
     fallback: 'architect',
     help: 'A pane whose `role` token has this value sorts first in its group. Empty for none.',
   },
@@ -168,6 +169,7 @@ const FIELDS = [
     key: 'coordinator_role',
     section: 'Groups',
     kind: 'text',
+    role: true,
     fallback: 'coordinator',
     help: 'A pane whose `role` token has this value ranks above the leader. Empty for none.',
   },
@@ -192,6 +194,20 @@ const FIELDS = [
     kind: 'glyph',
     fallback: '\uf418',
     help: 'The mark on a worktree header, after the branch corner. Enter a codepoint like U+F418, or empty for none.',
+  },
+  {
+    key: 'multi_machine',
+    section: 'Machines',
+    kind: 'bool',
+    fallback: false,
+    help: "Put this machine's name after each workspace header, for sessions on saved SSH machines. Set it on each machine.",
+  },
+  {
+    key: 'machine_label',
+    section: 'Machines',
+    kind: 'text',
+    fallback: '',
+    help: 'The name multi_machine shows, e.g. web · Machine-One. Empty = the hostname.',
   },
   {
     key: 'row_label',
@@ -283,9 +299,19 @@ async function applyView({ panelOn, panelChanged, order }) {
   view.setMode(mode);
 }
 
-// TOML text for a value: numbers bare, everything else double-quoted.
+// TOML text for a value: numbers bare, everything else double-quoted. The
+// reader (lib/config.js parseToml) strips the quotes and processes no escapes,
+// so a value holding `"` or `\` goes between single quotes, TOML's literal
+// string, which reads back the same in both. One that also holds `'`, or any
+// line break, has no such form: null, and the line stays as the user wrote it. A
+// free-text field can arrive that way from a hand edit, and a save that only
+// touched another field must not turn it into a broken line.
 function literal(value) {
-  return typeof value === 'number' || typeof value === 'boolean' ? String(value) : `"${value}"`;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  const text = String(value);
+  if (/[\r\n]/.test(text)) return null;
+  if (!/["\\]/.test(text)) return `"${text}"`;
+  return text.includes("'") ? null : `'${text}'`;
 }
 
 function saveValues(text, values) {
@@ -293,8 +319,10 @@ function saveValues(text, values) {
   const tables = {};
   for (const [field, value] of values) {
     if (value === undefined || field.virtual) continue;
-    if (field.table) (tables[field.table] ??= {})[field.key] = literal(value);
-    else top[field.key] = literal(value);
+    const text = literal(value);
+    if (text === null) continue;
+    if (field.table) (tables[field.table] ??= {})[field.key] = text;
+    else top[field.key] = text;
   }
   let next = editTopLevel(text, top);
   for (const [table, edits] of Object.entries(tables)) {
@@ -340,6 +368,8 @@ function show(field, value) {
       return value === '' ? `${DIM}none${R}` : `${codepoint(value)}  ${value}`;
     case 'color':
       return value === '' ? `${DIM}theme's own${R}` : String(value);
+    case 'text':
+      return value === '' ? `${DIM}none${R}` : String(value);
     default:
       return String(value);
   }
@@ -544,8 +574,13 @@ class Editor {
       }
       return this.values.set(field, raw);
     }
-    if (field.kind === 'text' && !/^[A-Za-z0-9_.:-]*$/.test(raw)) {
+    // A role is compared with a pane's `role` token, so it stays a plain name.
+    if (field.kind === 'text' && field.role && !/^[A-Za-z0-9_.:-]*$/.test(raw)) {
       return (this.status = `${WARN}letters, digits, _ . : - only${R}`);
+    }
+    // `literal` writes the value between double quotes as it is.
+    if (field.kind === 'text' && /["\\]/.test(raw)) {
+      return (this.status = `${WARN}no quotes or backslashes${R}`);
     }
     this.values.set(field, raw);
   }
@@ -741,4 +776,5 @@ module.exports = {
   keyHint,
   buttons,
   width,
+  literal,
 };

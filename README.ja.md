@@ -16,6 +16,13 @@
 
 ---
 
+> [!NOTE]
+> **メンテナンスモード。** Herdr の新しいアプリ herdr-app には、このプラグインの機能の多く
+> （グループ化、ベンダーロゴ、よりわかりやすい作業状態）がすでに組み込まれています。
+> herdr-radar は Herdr TUI のプラグインとして残り、Herdr の新しいリリースへの追従とバグ修正は
+> 続けます。小さな修正の PR は歓迎しますが、新機能は追加しません。詳しくは
+> [#73](https://github.com/hhdebb/herdr-radar/issues/73) を参照してください。
+
 ## これは何か
 
 [Herdr](https://herdr.dev) のプラグインです。サイドバーの Agents 一覧を、読めるパネルに変えます。
@@ -66,7 +73,7 @@ herdr plugin install hhdebb/herdr-radar
 
 > [!NOTE]
 > Herdr 0.9.0 以上、Node 18 以上が必要です。Windows 11 と macOS で確認済み、Linux は未確認です。
-> コードポイント割り当てのないターミナル（Windows Terminal、iTerm）と、Windows でタブバーが `cd` に
+> コードポイント割り当てのないターミナル（Windows Terminal、iTerm、Alacritty）と、Windows でタブバーが `cd` に
 > 追従しない件は「トラブルシューティング」を参照してください。
 
 キーは 2 つ、任意です。`config.toml` に貼り付けます。どちらも Herdr のプレフィックス（既定は
@@ -107,8 +114,7 @@ herdr plugin update hhdebb.herdr-radar
 すぐ新しい版に切り替えるには、デーモンだけを再起動します。ペインには影響しません：
 
 ```sh
-herdr plugin action invoke hhdebb.herdr-radar.state-stop
-herdr plugin action invoke hhdebb.herdr-radar.state-start
+herdr plugin action invoke hhdebb.herdr-radar.state-restart
 ```
 
 ### エージェントに任せる
@@ -270,12 +276,19 @@ bool/enum を変更（テキストは編集開始）、`Space`/`+` と `-` で�
 | `trim_group_prefix` | `true` | 見出しと同じ名前でタイトルが始まるとき、その部分を落とす |
 | `worktree_mark` | `U+F418` | worktree 見出しのマーク（Nerd Font が必要）。空で非表示 |
 
+### マシン
+
+| 項目 | 既定値 | 内容 |
+| --- | --- | --- |
+| `multi_machine` | `false` | 各ワークスペース見出しの後ろにマシン名を付ける（例 `web · Machine-One`）。保存済み SSH マシン上のセッションを見分けるためのもの。見出しは各マシンが自分で書くので、マシンごとに設定する |
+| `machine_label` | `""` | `multi_machine` が表示する名前。空ならホスト名 |
+
 ### 行
 
 | 項目 | 既定値 | 内容 |
 | --- | --- | --- |
 | `row_label` | `title` | 行の名前：`title` セッションのタイトル、`tab` タブ名、`both` 両方（旧 `show_tab = true`） |
-| `variant` | `auto` | ロゴをアイコンフォント（`font`）、通常の Unicode（`text`）、なし（`none`）。`auto` はプラグインが入れたフォントを認識 |
+| `variant` | `auto` | ロゴをアイコンフォント（`font`）、通常の Unicode（`text`）、なし（`none`）。`auto` はプラグインのフォントが入っていれば、ターミナルが割り当てられるかに関係なく `font`（「トラブルシューティング」参照） |
 
 ### 外観
 
@@ -286,7 +299,7 @@ bool/enum を変更（テキストは編集開始）、`Space`/`+` と `-` で�
 | `colors.active_row_bg_dark` | `#414868` | ダークテーマの選択行の背景 |
 
 最初の 2 つはライブの状態です。残りは `$(herdr plugin config-dir hhdebb.herdr-radar)/config.toml`
-にあり、手で編集してもかまいません。編集後は `state-stop`、続けて `state-start`。このファイルは
+にあり、手で編集してもかまいません。編集後は `state-restart` を実行します。このファイルは
 ポップアップが最初に保存したときに作られます。それより前に手で編集するなら、上の表のキーで自分で
 作ってください（真偽値は引用符なし：`group_gap = false`）。
 
@@ -303,14 +316,17 @@ bool/enum を変更（テキストは編集開始）、`Space`/`+` と `-` で�
 </details>
 
 <details>
-<summary><b>ロゴがランダムな漢字で描かれる</b></summary>
+<summary><b>ロゴや状態マークがランダムな漢字で描かれる</b></summary>
 
 別のフォントが同じ私用領域を主張しています（CJK フォントによくあります）。ターミナルは
 `Herdr Agent Icons Max` にコードポイント単位で割り当てる必要があり、フォールバックに加えるだけでは
 足りません。Ghostty / kitty：`herdr plugin action invoke hhdebb.herdr-radar.install-font` で書き込めます。
 それ以外：`U+E1A0–U+E1BA` と `U+E1C0–U+E1C5` を手で割り当ててください。コードポイント割り当ての
-ないターミナル（Windows Terminal、iTerm）は `dist/JetBrainsMonoHerdr-Regular.ttf` をターミナルの
-フォントに——アイコンを埋め込んだ JetBrains Mono です。
+ないターミナル（Windows Terminal、iTerm、Alacritty）は方法が 2 つあります。
+`dist/JetBrainsMonoHerdr-Regular.ttf` をターミナルのフォントにする（アイコンを埋め込んだ
+JetBrains Mono です）か、`variant = "text"`（`prefix+,`）にしてすべてのマークを通常の Unicode で
+描くかです。`variant = "auto"` はこの判断を代わりにできません。フォントが入っているかは分かっても、
+ターミナルが割り当てられるかは分からないからです。
 
 Ghostty では割り当てが解決したかを答えられるのは `ghostty +show-face` だけで、
 `+show-config` も `+list-fonts` もどちらでも通ります。v1.3.7 以前が書いた行は
@@ -332,7 +348,7 @@ Ghostty では割り当てが解決したかを答えられるのは `ghostty +s
 <summary><b>設定を変えたのに反映されない</b></summary>
 
 デーモンは起動時に設定を読みます。設定ポップアップの `s` は再起動します。手で編集したあとは
-`state-stop` の後に `state-start`。`config.toml` の 3 つの管理ブロックを直接編集しても、次の
+`state-restart` を実行します。`config.toml` の 3 つの管理ブロックを直接編集しても、次の
 `configure` で書き戻されます。
 </details>
 
